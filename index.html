@@ -11,8 +11,14 @@
     <v-app>
       <login v-if="!isLoggedIn" @login="login"></login>
       <v-container v-else>
+        <v-card>
+          <v-card-actions>
+            CRUD
+            <v-spacer></v-spacer>
+            <logout></logout>
+          </v-card-actions>
+        </v-card>
         <crud-table></crud-table>
-        <logout @logout="logout"></logout>
       </v-container>
     </v-app>
   </div>
