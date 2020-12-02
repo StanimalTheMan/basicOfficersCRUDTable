@@ -17,6 +17,8 @@ Vue.component('crud-table', {
     return {
       dialog: false,
       dialogDelete: false,
+      data: [],
+      //
       assignments: [],
       positionTitles: [],
       years: [], // academic years
@@ -32,47 +34,69 @@ Vue.component('crud-table', {
     };
   },
   computed: {
-    headers: function() {
-      // const dupsAssignments = this.assignments.map(assignment => { // is ES6 syntax ok
-      //   return {
-      //     text: assignment.year.academic_year,
-      //     value: assignment.officer.first_name
-      //   };
-      // });
+    headers: function() {      
+      // let firstHeaders = [
+      //   {
+      //     text: "POSITION TITLE",
+      //     value: 'officer_position_title'
+      //   },
+      //   {
+      //     text: "RANK MOS",
+      //   },
+      // ];
 
-      // // probably a better way to get unique assignments (do I handle this in backend?)
-      // let seen = new Set();
-      // const uniqueAssignments = [];
-      // dupsAssignments.forEach(assignment => {
-      //   if (!seen.has(assignment.text)) {
-      //     uniqueAssignments.push(assignment);
-      //     seen.add(assignment.text);
+      // const academicYears = [];
+      // const seenAcademicYears = new Set();
+      // // each data entry has all the unique years
+      // for (let assignmentData of this.data) {
+      //   const regex = /AY/;
+      //   for (let property in assignmentData) {
+
+      //     if (!seenAcademicYears.has(property) && regex.test(property)) {
+      //       academicYears.push({
+      //         text: property,
+      //         value: property
+      //       });
+      //     }
+      //     seenAcademicYears.add(property);
       //   }
-      // });
+      // }
 
-      // return uniqueAssignments;
+      // for (let academicYearHeader of academicYears) {
+      //   academicYearHeader.value = academic;
+      // }
+
       
-      let firstHeaders = [
+      // return firstHeaders.concat(academicYears);
+
+      const regex = /AY/;
+      const firstHeader = [
         {
           text: "POSITION TITLE",
           value: 'officer_position_title'
-        },
-        {
-          text: "RANK MOS",
-        } 
-      ]
+        }
+      ];
 
-      let academicYears = this.years.map(function(year) {
-        return {
-          text: year.academic_year,
-        };
-      });
-
-      return firstHeaders.concat(academicYears);
+      const academicHeaders = [];
+      for (let property in this.data[0]) { // use arbitrary dataset to establish headers? 
+        if (regex.test(property)) {
+          academicHeaders.push({
+            text: property,
+            value: `${property}.officer_full_name`
+          });
+        }
+      }
+      
+      return firstHeader.concat(academicHeaders);
     },
 
     formTitle: function() {
       return this.isEditing ? 'Edit TDA Position' : 'New TDA Position';
+    },
+
+    isAssignment: function(item) {
+      console.log(item);
+      return true;
     }
   },
   watch: {
@@ -108,29 +132,78 @@ Vue.component('crud-table', {
     // }
     getData: function() {
       // attempt to get all initial data completely asynchronously (in a concurrent way)
-      const index = ["assignments", "position_titles", "years"];
+      
+      // const index = ["assignments", "position_titles", "years"];
 
-      for (let i = 0; i < index.length; i++) {
-        const url = `http://localhost:5000/${index[i]}`;
+      // for (let i = 0; i < index.length; i++) {
+      //   const url = `http://localhost:5000/${index[i]}`;
 
-        const xhr = new XMLHttpRequest();
-        xhr.responseType = "json";
-        xhr.open('GET', url);
-        let that = this;
-        xhr.onreadystatechange = function() {
-          if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-            // probably a better approach out there somewhere
-            if (index[i] === "assignments") {
-              that.assignments = xhr.response.assignments;
-            } else if (index[i] === "position_titles") {
-              that.positionTitles = xhr.response.officer_position_titles;
-            } else {
-              that.years = xhr.response.academic_years;
-            }
-          }
+      //   const xhr = new XMLHttpRequest();
+      //   xhr.responseType = "json";
+      //   xhr.open('GET', url);
+      //   let that = this;
+      //   xhr.onreadystatechange = function() {
+      //     if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+      //       // probably a better approach out there somewhere
+      //       if (index[i] === "assignments") {
+      //         that.assignments = xhr.response.assignments;
+      //       } else if (index[i] === "position_titles") {
+      //         that.positionTitles = xhr.response.officer_position_titles;
+      //       } else {
+      //         that.years = xhr.response.academic_years;
+      //       }
+      //     }
+      //   }
+      //   xhr.send();
+      // }      
+
+      // attempt at getting data using many to many relationship btw positon titles and years
+      const xhr = new XMLHttpRequest();
+      xhr.responseType = "json";
+      xhr.open('GET', 'http://localhost:5000/data');
+      let that = this;
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          that.data = xhr.response.data;
         }
-        xhr.send();
-      }      
+      }
+
+      xhr.send();
+
+      // const xhr = new XMLHttpRequest();
+      // xhr.responseType = "json";
+      // xhr.open('GET', 'http://localhost:5000/data');
+      // let that = this;
+      // xhr.onload = function() {
+      //   if (xhr.status === 200) {
+      //     that.data = xhr.response.data;
+      //     that.getPositions();
+      //     for (let positionTitle of that.positionTitles) {
+      //       is_first_position_title_occurrence = true;
+      //       for (let assignmentData of that.data) {
+      //         if (is_first_position_title_occurence && assignmentData.position_title_id === positionTitle.id) {
+      //           positionTitle = {
+      //             officer_position_title: positionTitle.officer_position_title, // probs redundant
+      //             ...assignmentData
+      //           }
+      //         }
+
+      //       }
+      //     }
+      //     console.log(that.positionTitles);
+      //   }
+      // }
+      // xhr.send();
+    },
+    getPositions: function() {
+      const xhr = new XMLHttpRequest();
+      xhr.responseType = "json";
+      xhr.open('GET', 'http://localhost:5000/position_titles');
+      let that = this;
+      xhr.onload = function() {
+        that.positionTitles = xhr.response.officer_position_titles;
+      };
+      xhr.send();
     },
     editPosition: function (item) {
       this.isEditing = true;
@@ -143,7 +216,7 @@ Vue.component('crud-table', {
         this.editedPosition = Object.assign({}, this.defaultPosition);
         this.isEditing = false;
         this.getData();
-      })
+      });
     },
     save: function() {
       // POST AND PUT depending on this.
@@ -180,7 +253,7 @@ Vue.component('crud-table', {
           "Content-type",
           "application/json; charset=utf-8"
         );
-        let newPositionTitle = JSON.stringify({
+        const newPositionTitle = JSON.stringify({
           officer_position_title: this.editedPosition.officer_position_title,
         });
 
@@ -206,7 +279,7 @@ Vue.component('crud-table', {
   template: `
     <v-data-table
       :headers="headers"
-      :items="positionTitles"
+      :items="data"
     >
       <template v-slot:top>
         <v-row>
@@ -264,6 +337,56 @@ Vue.component('crud-table', {
           <v-btn class="white--text amber darken-1" @click="editPosition(item)">EDIT POS</v-btn>
         </v-row>
       </template>
+      <template v-slot:item.AY2223.officer_full_name="{ item, value }">
+        <v-row>
+          <v-btn v-if="!item.AY2223.officer_full_name" class="white--text green">ADD ASSIGNMENT</v-btn>
+          <div v-else>
+            {{ value }}<br>
+            <v-btn class="white--text amber darken-1">EDIT ASSIGN</v-btn>
+            <v-btn class="white--text red darken-1">DEL ASSIGN</v-btn>
+          </div>
+        </v-row>
+      </template>
+      <template v-slot:item.AY2324.officer_full_name="{ item, value }">
+        <v-row>
+          <v-btn v-if="!item.AY2324.officer_full_name" class="white--text green">ADD ASSIGNMENT</v-btn>
+          <div v-else>
+            {{ value }}<br>
+            <v-btn class="white--text amber darken-1">EDIT ASSIGN</v-btn>
+            <v-btn class="white--text red darken-1">DEL ASSIGN</v-btn>
+          </div>
+        </v-row>
+      </template>
+      <template v-slot:item.AY2425.officer_full_name="{ item, value }">
+        <v-row>
+          <v-btn v-if="!item.AY2425.officer_full_name" class="white--text green">ADD ASSIGNMENT</v-btn>
+          <div v-else>
+            {{ value }}<br>
+            <v-btn class="white--text amber darken-1">EDIT ASSIGN</v-btn>
+            <v-btn class="white--text red darken-1">DEL ASSIGN</v-btn>
+          </div>
+        </v-row>
+      </template>
+      <template v-slot:item.AY2526.officer_full_name="{ item, value }">
+        <v-row>
+          <v-btn v-if="!item.AY2526.officer_full_name" class="white--text green">ADD ASSIGNMENT</v-btn>
+          <div v-else>
+            {{ value }}
+            <v-btn class="white--text amber darken-1">EDIT ASSIGN</v-btn>
+            <v-btn class="white--text red darken-1">DEL ASSIGN</v-btn>
+          </div>
+        </v-row>
+      </template>
+      <template v-slot:item.AY2627.officer_full_name="{ item, value }">
+        <v-row>
+          <v-btn v-if="!item.AY2627.officer_full_name" class="white--text green">ADD ASSIGNMENT</v-btn>
+          <div v-else>
+            {{ value }}
+            <v-btn class="white--text amber darken-1">EDIT ASSIGN</v-btn>
+            <v-btn class="white--text red darken-1">DEL ASSIGN</v-btn>
+          </div>
+        </v-row>
+      </template>
     </v-data-table>
   `
 });
@@ -283,11 +406,13 @@ new Vue({
         xhr.withCredentials = true;
 
         xhr.responseType = "json";
-        // xhr.setRequestHeader(
-        //   "Content-type",
-        //   "application/json; charset=utf-8",
-
-        // );
+        xhr.setRequestHeader(
+          "Content-type",
+          "application/json; charset=utf-8",
+        );
+        xhr.setRequestHeader(
+          'Accept', 'application/json'
+        )
 
         xhr.send(JSON.stringify({
             username: "MarekKoz",
@@ -300,6 +425,7 @@ new Vue({
           } else {
             console.log(xhr.response.message);
             that.isLoggedIn = true;
+            // localStorage.setItem('Set-Cookie', xhr.getResponseHeader('Set-Cookie'));
           }
         }
       },
@@ -310,10 +436,6 @@ new Vue({
       xhr.open('POST', 'http://localhost:5000/logout');
 
       xhr.responseType = "json";
-      // xhr.setRequestHeader(
-      //   "Content-type",
-      //   "application/json; charset=utf-8"
-      // );
 
 
       xhr.onload = function() {
